@@ -1,0 +1,29 @@
+{
+  "name": "fundacion-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/willferdiez-stack/Fundacion-Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/willferdiez-stack/Fundacion-Backend/issues"
+  },
+  "homepage": "https://github.com/willferdiez-stack/Fundacion-Backend#readme",
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
