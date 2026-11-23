@@ -3,6 +3,7 @@ import dotenv from "dotenv"; // para cargar variables de entorno desde el archiv
 import { connectDB } from "./config/db.js"; // para conectar con la base de datos
 import healthRouter from "./routes/health.routes.js";
 import authRouter from "./routes/auth.routes.js";
+import anomalyRouter from "./routes/anomaly.routes.js";
 
 dotenv.config(); //carga las variables del archivo .env
 
@@ -15,6 +16,7 @@ app.use(express.json()); // permite leer el body de los POST en json
 
 app.use("/api", healthRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/anomalies", anomalyRouter);
 
 async function startServer() {
     try {
