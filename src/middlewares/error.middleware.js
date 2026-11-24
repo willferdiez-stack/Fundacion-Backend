@@ -1,5 +1,19 @@
 import { HttpError } from "../utils/HttpError.js";
 
+/**
+ * Gestiona de forma centralizada los errores de la API.
+ *
+ * Reconoce errores HttpError y errores habituales de Mongoose,
+ * como validaciones incorrectas, identificadores no válidos
+ * y valores duplicados.
+ *
+ * Los errores inesperados generan una respuesta HTTP 500.
+ *
+ * @param {Error} err - Error que debe gestionarse.
+ * @param {Object} req - Petición HTTP de Express.
+ * @param {Object} res - Respuesta HTTP de Express.
+ * @param {Function} next - Siguiente middleware de Express.
+ */
 export function errorHandler(err, req, res, next) {
     console.error("Error capturado:", err);
 

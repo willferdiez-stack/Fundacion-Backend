@@ -3,9 +3,20 @@ import User from "../models/user.js";
 import jwt from "jsonwebtoken";
 import { HttpError } from "../utils/HttpError.js";
 
+/**
+ * Registra un nuevo investigador en la aplicación.
+ *
+ * Comprueba los campos obligatorios, cifra la contraseña
+ * mediante bcrypt y almacena el usuario en MongoDB.
+ * El registro público asigna el rol "user" por defecto.
+ *
+ * @param {Object} req - Petición HTTP con los datos de registro.
+ * @param {Object} res - Respuesta HTTP de Express.
+ * @param {Function} next - Envía los errores al middleware centralizado.
+ */
 export async function register(req, res, next) {
     try {
-        const { username, email, password } = req.body; //Las variables tienen que tener el mismo nombre que en el modelo para sacar los datos correctos
+        const { username, email, password } = req.body;
 
         if (!username || !email || !password) {
             throw new HttpError(400, "Faltan campos obligatorios");
@@ -32,6 +43,18 @@ export async function register(req, res, next) {
     }
 }
 
+/**
+ * Autentica a un usuario mediante email y contraseña.
+ *
+ * Busca al usuario en MongoDB y compara la contraseña
+ * recibida con su hash mediante bcrypt.
+ * Si las credenciales son correctas, genera un JWT
+ * con una duración de una hora.
+ *
+ * @param {Object} req - Petición HTTP con las credenciales.
+ * @param {Object} res - Respuesta HTTP de Express.
+ * @param {Function} next - Envía los errores al middleware centralizado.
+ */
 export async function login(req, res, next) {
     try {
         const { email, password } = req.body;
@@ -56,7 +79,6 @@ export async function login(req, res, next) {
             throw new HttpError(401, "Credenciales incorrectas");
         }
 
-        // 5. Aquí añadiremos el JWT y la respuesta de éxito.
         const token = jwt.sign(
             { userId: user._id.toString(), role: user.role },
             process.env.JWT_SECRET,
@@ -78,6 +100,15 @@ export async function login(req, res, next) {
     }
 }
 
+/**
+ * Devuelve los datos del usuario autenticado.
+ *
+ * Utiliza la información almacenada en req.user
+ * por el middleware de autenticación.
+ *
+ * @param {Object} req - Petición HTTP con el usuario autenticado.
+ * @param {Object} res - Respuesta HTTP de Express.
+ */
 export function getMe(req, res) {
     return res.status(200).json({
         message: "Investigador autenticado",
