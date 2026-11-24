@@ -1,4 +1,6 @@
 import Anomaly from "../models/anomaly.js";
+import User from "../models/user.js";
+import { canModifyAnomaly } from "../utils/permissions.js";
 
 export async function createAnomaly(req, res) {
     if (!["user", "admin"].includes(req.user.role)) {
@@ -86,6 +88,12 @@ export async function getAnomalyByID(req, res) {
 
         const anomaly = await Anomaly.findOne(filter);
 
+        if (!anomaly) {
+            return res.status(404).json({
+                message: "Anomalía no encontrada"
+            });
+        }
+
         return res.status(200).json({
             anomaly
         });
@@ -112,13 +120,7 @@ export async function updateAnomaly(req, res) {
             });
         }
 
-        if (!["admin", "user"].includes(req.user.role)) {
-            return res.status(403).json({
-                message: "No tienes permiso para modificar anomalías"
-            });
-        }
-
-        if (req.user.role !== "admin" && anomaly.owner.toString() !== req.user.id) {
+        if (!canModifyAnomaly(req.user, anomaly)) {
             return res.status(403).json({
                 message: "No tienes permiso para modificar esta anomalía"
             });
@@ -152,6 +154,86 @@ export async function updateAnomaly(req, res) {
     }
 }
 
+export async function updateAnomalyAccess(req, res) {
+    try {
+        const { userId, action } = req.body;
+
+        // Comprobar que la operación solicitada es válida.
+        if (!userId || !["grant", "revoke"].includes(action)) {
+            return res.status(400).json({
+                message: "Debes indicar un usuario y una acción válida"
+            });
+        }
+
+        // Clase C no puede gestionar permisos.
+        if (!["admin", "user"].includes(req.user.role)) {
+            return res.status(403).json({
+                message: "No tienes permiso para gestionar accesos"
+            });
+        }
+
+        // Buscar la anomalía.
+        const anomaly = await Anomaly.findById(req.params.id);
+
+        if (!anomaly) {
+            return res.status(404).json({
+                message: "Anomalía no encontrada"
+            });
+        }
+
+        // Solo el administrador o el investigador responsable pueden continuar.
+        if (!canModifyAnomaly(req.user, anomaly)) {
+            return res.status(403).json({
+                message: "No tienes permiso para gestionar esta anomalía"
+            });
+        }
+
+        // Buscar al usuario que recibirá o perderá el acceso.
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "Usuario no encontrado"
+            });
+        }
+
+        if (action === "grant") {
+            if (user.role !== "classC") {
+                return res.status(400).json({
+                    message: "Solo puedes conceder acceso a usuarios Clase C"
+                });
+            }
+
+            anomaly.authorizedReaders.addToSet(user._id);
+
+        } else {
+            anomaly.authorizedReaders.pull(user._id);
+        }
+
+        await anomaly.save();
+
+        return res.status(200).json({
+            message: action === "grant"
+                ? "Acceso concedido correctamente"
+                : "Acceso retirado correctamente",
+            authorizedReaders: anomaly.authorizedReaders
+        });
+
+    } catch (error) {
+        console.error("Error al gestionar el acceso:", error);
+
+        if (error.name === "CastError") {
+            return res.status(400).json({
+                message: "Identificador no válido"
+            });
+        }
+
+        return res.status(500).json({
+            message: "Error interno del servidor"
+        });
+    }
+}
+
 export async function deleteAnomaly(req, res) {
     try {
         const anomaly = await Anomaly.findById(req.params.id);
@@ -162,15 +244,9 @@ export async function deleteAnomaly(req, res) {
             });
         }
 
-        if (!["admin", "user"].includes(req.user.role)) {
+        if (!canModifyAnomaly(req.user, anomaly)) {
             return res.status(403).json({
-                message: "No tienes permiso para borrar anomalías"
-            });
-        }
-
-        if (req.user.role !== "admin" && anomaly.owner.toString() !== req.user.id) {
-            return res.status(403).json({
-                message: "No tienes permiso para borrar esta anomalía"
+                message: "No tienes permiso para eliminar esta anomalía"
             });
         }
 

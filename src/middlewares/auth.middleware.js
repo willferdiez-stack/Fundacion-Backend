@@ -1,8 +1,10 @@
 import jwt from "jsonwebtoken";
+import User from "../models/user.js";
 
-export function authenticate(req, res, next) {
+export async function authenticate(req, res, next) {
     const authorization = req.headers.authorization;
 
+    // 1. Comprobar que la petición incluye un token
     if (!authorization?.startsWith("Bearer ")) {
         return res.status(401).json({
             message: "Token no proporcionado"
@@ -11,19 +13,40 @@ export function authenticate(req, res, next) {
 
     const token = authorization.split(" ")[1];
 
+    // 2. Verificar que el token es válido
+    let decoded;
+
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        req.user = {
-            id: decoded.userId,
-            role: decoded.role
-        };
-
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
         return res.status(401).json({
             message: "Token inválido o caducado"
         });
     }
 
+    // 3. Buscar al usuario en MongoDB y obtener su rol actual
+    try {
+        const user = await User.findById(decoded.userId);
+
+        if (!user) {
+            return res.status(401).json({
+                message: "Usuario no encontrado o sin acceso"
+            });
+        }
+
+        req.user = {
+            id: user._id.toString(),
+            role: user.role
+        };
+
+    } catch (error) {
+        console.error("Error al consultar el usuario:", error);
+
+        return res.status(500).json({
+            message: "Error interno del servidor"
+        });
+    }
+
+    // 4. Permitir que la petición continúe
     next();
 }
