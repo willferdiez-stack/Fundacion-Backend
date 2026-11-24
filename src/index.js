@@ -5,6 +5,7 @@ import healthRouter from "./routes/health.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import anomalyRouter from "./routes/anomaly.routes.js";
 import adminRouter from "./routes/admin.routes.js";
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 dotenv.config(); //carga las variables del archivo .env
 
@@ -19,6 +20,7 @@ app.use("/api", healthRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/anomalies", anomalyRouter);
 app.use("/api/admin", adminRouter);
+app.use(errorHandler);
 
 async function startServer() {
     try {

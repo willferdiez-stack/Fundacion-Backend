@@ -1,6 +1,7 @@
 import User from "../models/user.js";
+import { HttpError } from "../utils/HttpError.js";
 
-export async function getUsers(req, res) {
+export async function getUsers(req, res, next) {
     try {
         const users = await User.find().select("username email role createdAt");
 
@@ -9,36 +10,26 @@ export async function getUsers(req, res) {
             users
         });
     } catch (error) {
-        // Gestionar el error.
-        console.error("Error al obtener los usuarios:", error);
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        next(error);
     }
 }
 
-export async function updateUserRole(req, res) {
+export async function updateUserRole(req, res, next) {
     try {
         const { role } = req.body;
 
         if (!["admin", "user", "classC"].includes(role)) {
-            return res.status(400).json({
-                message: "Rol no válido"
-            });
+            throw new HttpError(400, "Rol no válido");
         }
 
         const user = await User.findById(req.params.id);
 
         if (!user) {
-            return res.status(404).json({
-                message: "Usuario no encontrado"
-            });
+            throw new HttpError(404, "Usuario no encontrado");
         }
 
         if (req.user.id === req.params.id) {
-            return res.status(403).json({
-                message: "No puedes modificar tu propio rol"
-            });
+            throw new HttpError(403, "No puedes modificar tu propio rol");
         }
 
         user.role = role;
@@ -53,16 +44,6 @@ export async function updateUserRole(req, res) {
             }
         });
     } catch (error) {
-        console.error("Error al modificar el usuario:", error);
-
-        if (error.name === "CastError") {
-            return res.status(400).json({
-                message: "Identificador de usuario no válido"
-            });
-        }
-
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        next(error);
     }
 }
