@@ -1,16 +1,14 @@
 import Anomaly from "../models/anomaly.js";
 import User from "../models/user.js";
 import { canModifyAnomaly } from "../utils/permissions.js";
+import { HttpError } from "../utils/HttpError.js";
 
-export async function createAnomaly(req, res) {
-    if (!["user", "admin"].includes(req.user.role)) {
-        return res.status(403).json({
-            message: "No tienes permiso para registrar anomalías"
-        });
-    }
-
-    // Aquí continuará la creación del expediente.
+export async function createAnomaly(req, res, next) {
     try {
+        if (!["user", "admin"].includes(req.user.role)) {
+            throw new HttpError(403, "No tienes permiso para registrar anomalías");
+        }
+
         const {
             code,
             name,
@@ -35,28 +33,11 @@ export async function createAnomaly(req, res) {
             anomaly
         });
     } catch (error) {
-        console.error("Error al crear la anomalía:", error);
-
-        //Diferentes tipos de código de error en el mismo IF
-        if (error.code === 11000) { //Coódigo de error de MongoDB para duplicados
-            return res.status(409).json({ //Código de error de HTTP para conflictos
-                message: "Ya existe una anomalía con ese código"
-            });
-        }
-
-        if (error.name === "ValidationError") {
-            return res.status(400).json({
-                message: "Los datos de la anomalía no son válidos"
-            });
-        }
-
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        next(error);
     }
 }
 
-export async function getAnomalies(req, res) {
+export async function getAnomalies(req, res, next) {
     try {
         let filter = {};
 
@@ -70,14 +51,11 @@ export async function getAnomalies(req, res) {
             anomalies
         });
     } catch (error) {
-        console.error("Error al obtener las anomalías:", error);
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        next(error);
     }
 }
 
-export async function getAnomalyByID(req, res) {
+export async function getAnomalyByID(req, res, next) {
 
     try {
         const filter = { _id: req.params.id };
@@ -89,41 +67,27 @@ export async function getAnomalyByID(req, res) {
         const anomaly = await Anomaly.findOne(filter);
 
         if (!anomaly) {
-            return res.status(404).json({
-                message: "Anomalía no encontrada"
-            });
+            throw new HttpError(404, "Anomalía no encontrada");
         }
 
         return res.status(200).json({
             anomaly
         });
     } catch (error) {
-        if (error.name === "CastError") {
-            return res.status(400).json({
-                message: "Identificador de anomalía no válido"
-            });
-        }
-        console.error("Error al obtener la anomalía:", error);
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        next(error);
     }
 }
 
-export async function updateAnomaly(req, res) {
+export async function updateAnomaly(req, res, next) {
     try {
         const anomaly = await Anomaly.findById(req.params.id);
 
         if (!anomaly) {
-            return res.status(404).json({
-                message: "Anomalía no encontrada"
-            });
+            throw new HttpError(404, "Anomalía no encontrada");
         }
 
         if (!canModifyAnomaly(req.user, anomaly)) {
-            return res.status(403).json({
-                message: "No tienes permiso para modificar esta anomalía"
-            });
+            throw new HttpError(403, "No tienes permiso para modificar esta anomalía");
         }
 
         const allowedFields = [
@@ -147,61 +111,46 @@ export async function updateAnomaly(req, res) {
             anomaly
         });
     } catch (error) {
-        console.error("Error al actualizar la anomalía:", error);
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        next(error);
     }
 }
 
-export async function updateAnomalyAccess(req, res) {
+export async function updateAnomalyAccess(req, res, next) {
     try {
         const { userId, action } = req.body;
 
         // Comprobar que la operación solicitada es válida.
         if (!userId || !["grant", "revoke"].includes(action)) {
-            return res.status(400).json({
-                message: "Debes indicar un usuario y una acción válida"
-            });
+            throw new HttpError(400, "Debes indicar un usuario y una acción válida");
         }
 
         // Clase C no puede gestionar permisos.
         if (!["admin", "user"].includes(req.user.role)) {
-            return res.status(403).json({
-                message: "No tienes permiso para gestionar accesos"
-            });
+            throw new HttpError(403, "No tienes permiso para gestionar accesos");
         }
 
         // Buscar la anomalía.
         const anomaly = await Anomaly.findById(req.params.id);
 
         if (!anomaly) {
-            return res.status(404).json({
-                message: "Anomalía no encontrada"
-            });
+            throw new HttpError(404, "Anomalía no encontrada");
         }
 
         // Solo el administrador o el investigador responsable pueden continuar.
         if (!canModifyAnomaly(req.user, anomaly)) {
-            return res.status(403).json({
-                message: "No tienes permiso para gestionar esta anomalía"
-            });
+            throw new HttpError(403, "No tienes permiso para gestionar esta anomalía");
         }
 
         // Buscar al usuario que recibirá o perderá el acceso.
         const user = await User.findById(userId);
 
         if (!user) {
-            return res.status(404).json({
-                message: "Usuario no encontrado"
-            });
+            throw new HttpError(404, "Usuario no encontrado");
         }
 
         if (action === "grant") {
             if (user.role !== "classC") {
-                return res.status(400).json({
-                    message: "Solo puedes conceder acceso a usuarios Clase C"
-                });
+                throw new HttpError(400, "Solo puedes conceder acceso a usuarios Clase C");
             }
 
             anomaly.authorizedReaders.addToSet(user._id);
@@ -220,34 +169,20 @@ export async function updateAnomalyAccess(req, res) {
         });
 
     } catch (error) {
-        console.error("Error al gestionar el acceso:", error);
-
-        if (error.name === "CastError") {
-            return res.status(400).json({
-                message: "Identificador no válido"
-            });
-        }
-
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        next(error);
     }
 }
 
-export async function deleteAnomaly(req, res) {
+export async function deleteAnomaly(req, res, next) {
     try {
         const anomaly = await Anomaly.findById(req.params.id);
 
         if (!anomaly) {
-            return res.status(404).json({
-                message: "Anomalía no encontrada"
-            });
+            throw new HttpError(404, "Anomalía no encontrada");
         }
 
         if (!canModifyAnomaly(req.user, anomaly)) {
-            return res.status(403).json({
-                message: "No tienes permiso para eliminar esta anomalía"
-            });
+            throw new HttpError(403, "No tienes permiso para eliminar esta anomalía");
         }
 
         await anomaly.deleteOne();
@@ -256,9 +191,6 @@ export async function deleteAnomaly(req, res) {
             message: "Anomalía borrada correctamente",
         });
     } catch (error) {
-        console.error("Error al eliminar la anomalía:", error);
-        return res.status(500).json({
-            message: "Error interno del servidor"
-        });
+        next(error);
     }
 }
