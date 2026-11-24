@@ -1,6 +1,18 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.js";
 
+/**
+ * Autentica una petición mediante un token JWT.
+ *
+ * Comprueba que exista un token Bearer válido y busca
+ * al usuario en MongoDB para obtener su rol actual.
+ * Si la autenticación es correcta, añade id y role
+ * a req.user y permite continuar la petición.
+ *
+ * @param {Object} req - Petición HTTP de Express.
+ * @param {Object} res - Respuesta HTTP de Express.
+ * @param {Function} next - Función para continuar la petición.
+ */
 export async function authenticate(req, res, next) {
     const authorization = req.headers.authorization;
 

@@ -22,6 +22,15 @@ app.use("/api/anomalies", anomalyRouter);
 app.use("/api/admin", adminRouter);
 app.use(errorHandler);
 
+/**
+ * Inicia la aplicación después de conectar con MongoDB.
+ *
+ * Establece primero la conexión con la base de datos y,
+ * si tiene éxito, comienza a escuchar peticiones HTTP
+ * en el puerto configurado.
+ *
+ * @returns {Promise<void>}
+ */
 async function startServer() {
     try {
         await connectDB(); // conectamos con la base de datos

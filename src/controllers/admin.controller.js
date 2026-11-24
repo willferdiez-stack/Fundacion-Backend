@@ -1,6 +1,20 @@
 import User from "../models/user.js";
 import { HttpError } from "../utils/HttpError.js";
 
+/**
+ * Obtiene la lista de usuarios registrados.
+ *
+ * Consulta MongoDB y devuelve únicamente los campos
+ * necesarios para la administración, sin incluir
+ * los hashes de las contraseñas.
+ *
+ * El acceso a esta operación está protegido por
+ * el middleware de autorización de administradores.
+ *
+ * @param {Object} req - Petición HTTP de Express.
+ * @param {Object} res - Respuesta HTTP de Express.
+ * @param {Function} next - Envía los errores al middleware centralizado.
+ */
 export async function getUsers(req, res, next) {
     try {
         const users = await User.find().select("username email role createdAt");
@@ -14,6 +28,19 @@ export async function getUsers(req, res, next) {
     }
 }
 
+/**
+ * Modifica el rol de un usuario registrado.
+ *
+ * Comprueba que el rol solicitado sea válido,
+ * que el usuario exista y que el administrador
+ * no esté intentando modificar su propio rol.
+ *
+ * Solo permite los roles "admin", "user" y "classC".
+ *
+ * @param {Object} req - Petición con el ID del usuario y el nuevo rol.
+ * @param {Object} res - Respuesta HTTP de Express.
+ * @param {Function} next - Envía los errores al middleware centralizado.
+ */
 export async function updateUserRole(req, res, next) {
     try {
         const { role } = req.body;
