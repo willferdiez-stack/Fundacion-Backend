@@ -1,5 +1,6 @@
 import Anomaly from "../models/anomaly.js";
 import User from "../models/user.js";
+import { canModifyAnomaly } from "../utils/permissions.js";
 
 export async function createAnomaly(req, res) {
     if (!["user", "admin"].includes(req.user.role)) {
@@ -119,13 +120,7 @@ export async function updateAnomaly(req, res) {
             });
         }
 
-        if (!["admin", "user"].includes(req.user.role)) {
-            return res.status(403).json({
-                message: "No tienes permiso para modificar anomalías"
-            });
-        }
-
-        if (req.user.role !== "admin" && anomaly.owner.toString() !== req.user.id) {
+        if (!canModifyAnomaly(req.user, anomaly)) {
             return res.status(403).json({
                 message: "No tienes permiso para modificar esta anomalía"
             });
@@ -187,8 +182,7 @@ export async function updateAnomalyAccess(req, res) {
         }
 
         // Solo el administrador o el investigador responsable pueden continuar.
-        if (req.user.role !== "admin" &&
-            anomaly.owner.toString() !== req.user.id) {
+        if (!canModifyAnomaly(req.user, anomaly)) {
             return res.status(403).json({
                 message: "No tienes permiso para gestionar esta anomalía"
             });
@@ -250,15 +244,9 @@ export async function deleteAnomaly(req, res) {
             });
         }
 
-        if (!["admin", "user"].includes(req.user.role)) {
+        if (!canModifyAnomaly(req.user, anomaly)) {
             return res.status(403).json({
-                message: "No tienes permiso para borrar anomalías"
-            });
-        }
-
-        if (req.user.role !== "admin" && anomaly.owner.toString() !== req.user.id) {
-            return res.status(403).json({
-                message: "No tienes permiso para borrar esta anomalía"
+                message: "No tienes permiso para eliminar esta anomalía"
             });
         }
 
