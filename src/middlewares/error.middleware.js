@@ -3,8 +3,8 @@ import { HttpError } from "../utils/HttpError.js";
 /**
  * Gestiona de forma centralizada los errores de la API.
  *
- * Reconoce errores HttpError y errores habituales de Mongoose,
- * como validaciones incorrectas, identificadores no válidos
+ * Reconoce errores HttpError, JSON mal formado y errores habituales
+ * de Mongoose, como validaciones incorrectas, identificadores no válidos
  * y valores duplicados.
  *
  * Los errores inesperados generan una respuesta HTTP 500.

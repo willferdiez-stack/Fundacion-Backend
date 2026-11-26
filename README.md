@@ -1,110 +1,126 @@
 # Fundación Backend
 
-API REST desarrollada con Node.js, Express y MongoDB para gestionar usuarios y registros de anomalías. El proyecto incluye autenticación mediante JWT, control de roles y permisos de acceso a las anomalías.
+API REST desarrollada con **Node.js, Express y MongoDB** para gestionar usuarios y expedientes de anomalías, inspirados en el universo ficticio de la Fundación SCP. Incluye autenticación JWT, control de roles, permisos individuales para usuarios Clase C, filtros de búsqueda y pruebas automatizadas.
 
 ## Tecnologías
 
-- Node.js con módulos ES
-- Express 5
-- MongoDB y Mongoose
-- JSON Web Tokens
-- bcrypt
-- Vitest
-- Docker Compose
+- Node.js con módulos ES y Express 5
+- MongoDB 8 y Mongoose
+- JSON Web Tokens (JWT) y bcrypt
+- Vitest para pruebas automatizadas
+- Docker Compose para ejecutar MongoDB
+- Postman para probar los endpoints
 
 ## Funcionalidades
 
-- Registro e inicio de sesión de usuarios
-- Autenticación mediante tokens JWT
-- Gestión de roles: `admin`, `user` y `classC`
-- Creación, consulta, actualización y eliminación de anomalías
-- Restricción de lecturas para usuarios Clase C
-- Concesión y retirada de accesos a anomalías
-- Administración de usuarios para cuentas administradoras
-- Pruebas unitarias de permisos y autorización
+- Registro e inicio de sesión; autenticación mediante JWT.
+- Roles `admin`, `user` (investigador) y `classC`.
+- Creación, consulta, modificación y eliminación de anomalías.
+- Consultas con filtros opcionales y combinables por clase de contención, peligrosidad mínima y nombre.
+- Lectura restringida a expedientes autorizados para usuarios Clase C, también al aplicar filtros.
+- Concesión y retirada de permisos de lectura por anomalía.
+- Consulta de usuarios y cambio de roles para administradores.
+- Tratamiento centralizado de errores y **12 tests automatizados**.
 
 ## Requisitos
 
-- Node.js
-- npm
-- Docker y Docker Compose, para ejecutar MongoDB
+- **Node.js 22.12 o posterior dentro de la rama 22, o Node.js 24/26**, con npm (según los requisitos de las dependencias instaladas).
+- Docker con Docker Compose para iniciar la base de datos (o una instancia de MongoDB compatible configurada en `MONGO_URI`).
+- Postman, opcional, para utilizar la colección incluida.
 
-## Instalación
+## Instalación y puesta en marcha
 
 1. Clona el repositorio:
 
-```bash
-git clone https://github.com/willferdiez-stack/Fundacion-Backend.git
-cd Fundacion-Backend
-```
+   ```bash
+   git clone https://github.com/willferdiez-stack/Fundacion-Backend.git
+   cd Fundacion-Backend
+   ```
 
 2. Instala las dependencias:
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-> En Windows PowerShell, si aparece un error de ejecución de scripts al utilizar `npm`, puedes ejecutar `npm.cmd install` en su lugar. También puedes utilizar `npm.cmd run dev` y `npm.cmd test`.
+3. Crea tu archivo de entorno a partir del ejemplo:
 
-3. Crea el archivo de variables de entorno:
+   ```bash
+   cp .env.example .env
+   ```
 
-```bash
-cp .env.example .env
-```
+   En Windows PowerShell puedes utilizar `Copy-Item .env.example .env`.
 
-En Windows, puedes copiarlo manualmente o ejecutar:
+4. Comprueba el contenido de `.env` y **sustituye `JWT_SECRET` por una clave secreta propia**:
 
-```powershell
-Copy-Item .env.example .env
-```
+   ```env
+   PORT=3001
+   MONGO_URI=mongodb://127.0.0.1:27017/fundacion_backend
+   JWT_SECRET=pon_aqui_una_clave_secreta_segura
+   ```
 
-4. Configura las variables del archivo `.env`:
+   Estas son las tres variables que necesita la aplicación. El archivo `.env` está excluido del repositorio mediante `.gitignore`.
 
-```env
-PORT=3001
-MONGO_URI=mongodb://127.0.0.1:27017/fundacion_backend
-JWT_SECRET=tu_clave_secreta_aqui
-```
+5. Inicia MongoDB:
 
-> Utiliza una clave secreta segura y no publiques el valor real de `JWT_SECRET`.
+   ```bash
+   docker compose up -d
+   ```
 
-5. Inicia MongoDB con Docker Compose:
+6. Inicia la API en modo desarrollo:
 
-```bash
-docker compose up -d
-```
+   ```bash
+   npm run dev
+   ```
 
-6. Inicia el servidor:
+   También puedes utilizar `npm start` para iniciarla sin recarga automática.
 
-```bash
-npm run dev
-```
+El servidor estará disponible en **`http://localhost:3001`** (salvo que cambies `PORT`). Para comprobarlo, haz una petición `GET http://localhost:3001/api/health`: debe responder con `status: "ok"`.
 
-La API estará disponible en `http://localhost:3001`.
+> **Windows PowerShell:** si la política de ejecución impide usar `npm`, prueba `npm.cmd install`, `npm.cmd run dev` o `npm.cmd test`.
 
-También puedes iniciar el servidor sin el modo de desarrollo:
+## Primera configuración: crear un administrador
 
-```bash
-npm start
-```
+La base de datos comienza vacía. El registro público **siempre crea usuarios con rol `user`**; no es posible registrarse directamente como administrador o Clase C.
 
-## Variables de entorno
+Para preparar los roles en una instalación nueva:
 
-| Variable | Descripción | Valor de ejemplo |
-|---|---|---|
-| `PORT` | Puerto en el que escucha el servidor | `3001` |
-| `MONGO_URI` | URL de conexión a MongoDB | `mongodb://127.0.0.1:27017/fundacion_backend` |
-| `JWT_SECRET` | Clave utilizada para firmar y verificar los JWT | `tu_clave_secreta_aqui` |
+1. Ejecuta la petición **Registrar administrador** de la colección de Postman, o registra un usuario mediante `POST /api/auth/register`.
+2. Abre una consola de MongoDB desde la carpeta del proyecto:
 
-## Uso de autenticación
+   ```bash
+   docker compose exec mongodb mongosh
+   ```
 
-Las rutas protegidas requieren un token JWT en la cabecera HTTP:
+3. En `mongosh`, selecciona la base de datos y cambia el rol de ese usuario (sustituye el correo si has utilizado otro):
+
+   ```javascript
+   use fundacion_backend
+   db.users.updateOne(
+     { email: "admin@fundacion.test" },
+     { $set: { role: "admin" } }
+   )
+   ```
+
+4. Inicia sesión con **Login administrador**. A partir de ese momento podrás cambiar los roles de otras cuentas desde `PATCH /api/admin/users/:id/role?role=classC`, sin volver a utilizar `mongosh`.
+
+Las cuentas de ejemplo de Postman se crean con sus peticiones de registro: **importar la colección no introduce usuarios ni anomalías en MongoDB**. Si cambias las credenciales de registro, recuerda utilizar las mismas en los Body de login.
+
+## Autenticación y roles
+
+Las rutas protegidas requieren la cabecera:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-Los tokens tienen una duración de una hora.
+El JWT se obtiene mediante `POST /api/auth/login` y tiene una duración de **una hora**.
+
+| Rol | Permisos principales |
+|---|---|
+| `admin` | Consulta y administración de usuarios y de cualquier anomalía. |
+| `user` | Consulta todas las anomalías; puede crear y modificar, eliminar o gestionar permisos únicamente en las suyas. |
+| `classC` | Solo puede consultar anomalías para las que figure en `authorizedReaders`. No puede crearlas ni modificarlas. |
 
 ## Endpoints
 
@@ -112,17 +128,17 @@ Los tokens tienen una duración de una hora.
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| `GET` | `/api/health` | Público | Comprueba que la API está operativa |
+| `GET` | `/api/health` | Público | Comprueba que la API responde. |
 
 ### Autenticación
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | Público | Registra un usuario |
-| `POST` | `/api/auth/login` | Público | Inicia sesión y devuelve un JWT |
-| `GET` | `/api/auth/me` | Autenticado | Devuelve el usuario autenticado |
+| `POST` | `/api/auth/register` | Público | Registra un usuario nuevo con rol `user`. |
+| `POST` | `/api/auth/login` | Público | Comprueba las credenciales y devuelve un JWT. |
+| `GET` | `/api/auth/me` | Autenticado | Devuelve el ID y rol del usuario autenticado. |
 
-Ejemplo de registro:
+Ejemplo del Body para registrar un usuario:
 
 ```json
 {
@@ -132,27 +148,20 @@ Ejemplo de registro:
 }
 ```
 
-Ejemplo de inicio de sesión:
-
-```json
-{
-  "email": "investigador@example.com",
-  "password": "contraseña-segura"
-}
-```
+Para el login se envían `email` y `password` en el Body.
 
 ### Anomalías
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| `POST` | `/api/anomalies` | `user` o `admin` | Crea una anomalía |
-| `GET` | `/api/anomalies` | Autenticado | Lista las anomalías disponibles |
-| `GET` | `/api/anomalies/:id` | Autenticado | Obtiene una anomalía por ID |
-| `PATCH` | `/api/anomalies/:id` | Propietario o `admin` | Actualiza una anomalía |
-| `DELETE` | `/api/anomalies/:id` | Propietario o `admin` | Elimina una anomalía |
-| `PATCH` | `/api/anomalies/:id/access` | Propietario o `admin` | Concede o retira acceso Clase C |
+| `POST` | `/api/anomalies` | `user`, `admin` | Crea un expediente; el propietario es el usuario autenticado. |
+| `GET` | `/api/anomalies` | Autenticado | Lista los expedientes accesibles y admite filtros opcionales. |
+| `GET` | `/api/anomalies/:id` | Autenticado | Consulta un expediente por su ID de MongoDB. |
+| `PATCH` | `/api/anomalies/:id` | Propietario o `admin` | Actualiza los campos permitidos. |
+| `DELETE` | `/api/anomalies/:id` | Propietario o `admin` | Elimina el expediente. |
+| `PATCH` | `/api/anomalies/:id/access` | Propietario o `admin` | Concede o retira acceso de lectura a Clase C. |
 
-Ejemplo de creación:
+Ejemplo de Body para crear una anomalía:
 
 ```json
 {
@@ -170,114 +179,113 @@ Ejemplo de creación:
 }
 ```
 
-Campos permitidos para `containmentClass`: `Safe`, `Euclid` y `Keter`.
+Las clases de contención válidas son `Safe`, `Euclid` y `Keter`. El nivel de peligrosidad debe estar entre **1 y 5**. Al modificar una anomalía se pueden actualizar `name`, `description`, `containmentClass`, `dangerLevel` y `protocols`, pero no `code` ni `owner`.
 
-El campo `dangerLevel` debe ser un número comprendido entre `1` y `5`.
+#### Filtros para listar anomalías
 
-Ejemplo para conceder o retirar acceso:
+`GET /api/anomalies` acepta estos **Query Params opcionales y combinables**:
+
+| Parámetro | Valor de ejemplo | Comportamiento |
+|---|---|---|
+| `containmentClass` | `Keter` | Coincidencia exacta con `Safe`, `Euclid` o `Keter`. |
+| `minDanger` | `4` | Devuelve niveles de peligrosidad **mayores o iguales** al indicado; admite enteros de 1 a 5. |
+| `name` | `sombra` | Busca una coincidencia parcial sin distinguir mayúsculas y minúsculas. |
+
+Ejemplo con los tres filtros:
+
+```http
+GET /api/anomalies?containmentClass=Keter&minDanger=4&name=sombra
+```
+
+Los filtros se aplican conjuntamente. Para `classC` se añade **siempre** la restricción de `authorizedReaders`: ningún filtro permite acceder a expedientes no autorizados. Un parámetro inválido provoca un `400 Bad Request`.
+
+#### Conceder y retirar acceso
+
+El identificador de la anomalía va en `:id`, mientras que el del **usuario Clase C destinatario** se indica en el Query Param `userId`:
+
+```http
+PATCH /api/anomalies/:id/access?userId=ID_DEL_USUARIO_CLASE_C
+```
+
+Para conceder el acceso, el Body contiene:
 
 ```json
 {
-  "userId": "ID_DEL_USUARIO_CLASE_C",
   "action": "grant"
 }
 ```
 
-Los valores válidos de `action` son `grant` y `revoke`.
+Para retirarlo, se utiliza `"action": "revoke"`. Solo el administrador o el propietario del expediente pueden gestionar estos permisos. Al conceder un acceso, el destinatario debe tener rol `classC`.
 
 ### Administración
 
-Las siguientes rutas están disponibles exclusivamente para usuarios con rol `admin`.
+Estas rutas requieren autenticación con rol `admin`:
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET` | `/api/admin/users` | Lista los usuarios |
-| `PATCH` | `/api/admin/users/:id/role` | Cambia el rol de un usuario |
+| `GET` | `/api/admin/users` | Lista los usuarios sin mostrar hashes de contraseñas. |
+| `PATCH` | `/api/admin/users/:id/role` | Cambia el rol de un usuario. |
 
-Ejemplo de cambio de rol:
+El usuario cuyo rol se modifica se identifica mediante `:id` y **el nuevo rol se envía mediante el Query Param `role`**, no en el Body:
 
-```json
-{
-  "role": "classC"
-}
+```http
+PATCH /api/admin/users/:id/role?role=classC
 ```
 
-Los roles válidos son `admin`, `user` y `classC`. Un administrador no puede cambiar su propio rol.
+Los roles válidos son `admin`, `user` y `classC`. El administrador no puede modificar su propio rol.
 
 ## Colección de Postman
 
-El proyecto incluye una colección de Postman en
-`postman/Fundacion-Backend.postman_collection.json`.
+La colección exportada está en **`postman/Fundacion Backend.postman_collection.json`**. Para utilizarla:
 
-Para utilizarla, importa el archivo JSON en Postman
-y configura la variable `baseUrl` con la dirección
-del servidor.
+1. Importa ese archivo JSON en Postman.
+2. Abre las variables de la colección y establece **`baseUrl = http://localhost:3001`** (en el JSON exportado su valor está vacío).
+3. Comprueba el servidor desde **Preparación → Comprobar servidor**.
+4. Registra las cuentas de ejemplo con las peticiones de **Autenticación**. Convierte la primera en administrador siguiendo la sección «Primera configuración» y utiliza la ruta administrativa para asignar `classC` al usuario correspondiente.
+5. Ejecuta el login de la cuenta que vayas a utilizar. El script de Postman guarda automáticamente el JWT en `token`; al cambiar de usuario, vuelve a iniciar sesión con la cuenta deseada.
+6. Crea una anomalía y copia su `_id` de la respuesta para utilizarlo en **Params → Path Variables → `id`** de las peticiones de consulta, modificación, eliminación o acceso. Para conceder acceso, copia también el ID del usuario destinatario en **Params → Query Params → `userId`**.
 
-La colección incluye peticiones de autenticación,
-gestión de anomalías y administración.
+Los **Body y Params ya están preparados** en la colección. Se han conservado identificadores de ejemplo en algunas Path Variables: **no corresponden a la base de datos de quien clone el proyecto**, por lo que deben sustituirse antes de enviar las peticiones. En «Cambiar rol», selecciona el Query Param `role` apropiado (solo un valor a la vez). En «Listar anomalías», activa los filtros que desees comprobar, también evitando activar a la vez varios valores del mismo parámetro.
 
-Las peticiones que requieren autenticación utilizan
-un token JWT, que se guarda automáticamente al
-ejecutar una petición de login.
+> **Precaución:** antes de ejecutar DELETE, comprueba siempre que `id` apunta a un expediente creado para pruebas. Las credenciales incluidas en la colección son de demostración y no deben reutilizarse en otros entornos.
 
-Para probar las operaciones que dependen de usuarios
-o anomalías existentes, primero deben crearse los
-registros correspondientes en la base de datos.
+## Gestión de errores
 
-## Roles y permisos
+La API centraliza los errores mediante `HttpError` y un middleware de Express. Algunos ejemplos:
 
-| Rol | Permisos principales |
+| Situación | Código |
 |---|---|
-| `user` | Crear anomalías y administrar las anomalías de las que es propietario |
-| `admin` | Acceso administrativo completo y administración de todas las anomalías |
-| `classC` | Solo puede consultar las anomalías a las que ha sido autorizado |
-
-### Preparación de usuarios de prueba
-
-El registro público crea usuarios con el rol `user`. Para probar las funciones administrativas en una base de datos nueva, primero hay que registrar un usuario y asignarle el rol `admin` directamente desde MongoDB.
-
-Una vez exista una cuenta administradora, se podrán utilizar los endpoints administrativos para asignar otros roles, incluido `classC`.
-
-La colección de Postman contiene credenciales de ejemplo, pero **no crea automáticamente esos usuarios**: deben existir previamente en la base de datos.
+| Datos inválidos o JSON mal formado | `400` |
+| Credenciales incorrectas o falta de autenticación válida | `401` |
+| Acceso sin autorización | `403` |
+| Recurso inexistente o no visible para Clase C | `404` |
+| Valor único duplicado | `409` |
+| Error inesperado | `500` |
 
 ## Pruebas
 
-Ejecuta las pruebas con:
+Ejecuta todas las pruebas automatizadas con:
 
 ```bash
 npm test
 ```
 
-Las pruebas actuales cubren los permisos de modificación de anomalías y el middleware de autorización.
+Hay **12 tests con Vitest**, distribuidos en tres archivos:
+
+| Archivo | Tests | Qué comprueban |
+|---|---:|---|
+| `__tests__/permissions.test.js` | 4 | Permisos de modificación por rol y propiedad. |
+| `__tests__/authorize.test.js` | 2 | Autorización de una ruta protegida por rol. |
+| `__tests__/anomalyFilters.test.js` | 6 | Construcción y validación de filtros y restricciones para Clase C. |
+
+Los tests de filtros utilizan un mock de `Anomaly.find()` y no requieren conexión a MongoDB. Las operaciones completas de autenticación, persistencia y gestión de accesos se han comprobado manualmente mediante Postman; **no existe todavía una suite automatizada de integración**.
 
 ## Comandos disponibles
 
 | Comando | Descripción |
 |---|---|
-| `npm start` | Inicia la API con Node.js |
-| `npm run dev` | Inicia la API con recarga automática mediante Nodemon |
-| `npm test` | Ejecuta las pruebas con Vitest |
-| `docker compose up -d` | Inicia MongoDB en segundo plano |
-| `docker compose down` | Detiene los contenedores |
-
-## Estructura del proyecto
-
-```text
-.
-├── __tests__/                 # Pruebas unitarias
-├── postman/                   # Colección de peticiones de Postman
-│   └── Fundacion-Backend.postman_collection.json
-├── src/
-│   ├── config/                # Conexión con MongoDB
-│   ├── controllers/           # Lógica de las rutas
-│   ├── middlewares/           # Autenticación, autorización y errores
-│   ├── models/                # Modelos de Mongoose
-│   ├── routes/                # Definición de endpoints
-│   ├── utils/                # Utilidades y reglas de permisos
-│   └── index.js               # Punto de entrada y configuración de Express
-├── .env.example
-├── compose.yaml
-├── package.json
-├── MEMORIA.md
-└── README.md
-```
+| `npm start` | Inicia la API con Node.js. |
+| `npm run dev` | Inicia la API con recarga automática mediante Nodemon. |
+| `npm test` | Ejecuta los 12 tests con Vitest. |
+| `docker compose up -d` | Inicia MongoDB en segundo plano. |
+| `docker compose down` | Detiene el contenedor de MongoDB sin eliminar el volumen persistente. |

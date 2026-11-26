@@ -111,7 +111,7 @@ export async function login(req, res, next) {
  */
 export function getMe(req, res) {
     return res.status(200).json({
-        message: "Investigador autenticado",
+        message: "Usuario autenticado",
         user: req.user
     });
 }

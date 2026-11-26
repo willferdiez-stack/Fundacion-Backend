@@ -26,7 +26,8 @@ Para conseguirlo, se han establecido los siguientes objetivos:
 - Establecer diferentes roles de usuario y controlar los permisos de acceso a los recursos.
 - Organizar el código en rutas, controladores, modelos, middlewares y funciones auxiliares.
 - Centralizar la gestión de errores y devolver respuestas HTTP adecuadas.
-- Crear pruebas unitarias para comprobar determinadas reglas de autorización.
+- Incorporar búsquedas opcionales y combinables sin debilitar las restricciones de acceso.
+- Crear pruebas unitarias para comprobar reglas de autorización, construcción de filtros y validación de parámetros.
 - Documentar la instalación, el funcionamiento y las decisiones técnicas del proyecto.
 
 ### 1.3. Funcionalidades principales
@@ -39,7 +40,9 @@ La API cuenta con tres roles de usuario:
 
 Para gestionar los permisos de lectura de Clase C, cada anomalía dispone de una lista de usuarios autorizados. Los administradores y los investigadores responsables de cada expediente pueden conceder o retirar estos accesos.
 
-La aplicación también incorpora validaciones de datos, respuestas de error centralizadas y pruebas automatizadas que comprueban las reglas de autorización y propiedad de los expedientes.
+La aplicación permite filtrar los expedientes por **clase de contención**, **nivel mínimo de peligrosidad** y **nombre parcial**, combinando criterios en la misma petición. Las restricciones de Clase C se mantienen incluso cuando utiliza filtros.
+
+También incorpora validaciones de datos, respuestas de error centralizadas y **12 pruebas automatizadas** que comprueban reglas de autorización y construcción de consultas.
 
 ## 2. Base de datos y modelo de datos
 
@@ -195,13 +198,13 @@ Estas operaciones son atendidas por las funciones de `auth.controller.js`, donde
 
 El archivo `anomaly.routes.js` agrupa las operaciones relacionadas con los expedientes.
 
-Su controlador, `anomaly.controller.js`, permite crear, consultar, actualizar y eliminar anomalías, además de conceder o retirar permisos de lectura a usuarios Clase C.
+Su controlador, `anomaly.controller.js`, permite crear, consultar, actualizar y eliminar anomalías, además de conceder o retirar permisos de lectura a usuarios Clase C. En el listado admite filtros opcionales mediante los parámetros de consulta `containmentClass`, `minDanger` y `name`.
 
 **Administración**
 
 El archivo `admin.routes.js` contiene las rutas reservadas a administradores.
 
-Desde `admin.controller.js` se pueden consultar los usuarios registrados y modificar sus roles.
+Desde `admin.controller.js` se pueden consultar los usuarios registrados y modificar sus roles. En el cambio de rol, el usuario se selecciona mediante `req.params.id` y el nuevo rol se obtiene de `req.query.role`.
 
 **Estado de la API**
 
@@ -280,6 +283,24 @@ Por último, el servidor comienza a escuchar peticiones una vez que se ha establ
 
 Esta organización permite separar la configuración inicial de la aplicación de la lógica que procesa las peticiones.
 
+### 3.7. Filtros de búsqueda de anomalías
+
+El endpoint `GET /api/anomalies` acepta tres parámetros de consulta opcionales:
+
+- **`containmentClass`**: limita la búsqueda a una clase válida: `Safe`, `Euclid` o `Keter`.
+- **`minDanger`**: busca expedientes cuyo `dangerLevel` sea mayor o igual que un entero comprendido entre 1 y 5. En Mongoose se utiliza el operador `$gte`.
+- **`name`**: permite buscar una coincidencia parcial del nombre, sin distinguir mayúsculas y minúsculas. Para ello se usa `$regex` con la opción `i`; se escapan los caracteres especiales introducidos por el cliente para tratarlos como texto literal.
+
+Los criterios pueden combinarse en una misma petición, por ejemplo:
+
+```http
+GET /api/anomalies?containmentClass=Keter&minDanger=4&name=sombra
+```
+
+El controlador construye un único objeto `filter` que se entrega a `Anomaly.find(filter)`. Si el usuario es Clase C, se añade primero la condición `authorizedReaders: req.user.id` y después se incorporan los filtros solicitados. De esta manera, la búsqueda nunca amplía los expedientes que puede consultar ese usuario.
+
+Los parámetros incorrectos se rechazan mediante `HttpError(400, ...)` antes de consultar MongoDB.
+
 ## 4. Autenticación, seguridad y permisos
 
 ### 4.1. Registro y autenticación de usuarios
@@ -304,7 +325,7 @@ Se han implementado tres roles:
 | `user` | Crear anomalías y modificar, eliminar o gestionar los accesos de sus propios expedientes. |
 | `classC` | Consultar únicamente las anomalías para las que tiene autorización. |
 
-El registro público asigna siempre el rol `user`. Los cambios de rol se realizan desde una ruta administrativa protegida por el middleware `authorize`.
+El registro público asigna siempre el rol `user`. Los cambios de rol se realizan desde una ruta administrativa protegida por el middleware `authorize`; en ella, el nuevo rol se obtiene del parámetro de consulta `role`.
 
 Para las operaciones sobre anomalías se utiliza la función auxiliar `canModifyAnomaly`, que comprueba si el usuario es administrador o investigador propietario.
 
@@ -316,7 +337,7 @@ Una de las funcionalidades añadidas durante el desarrollo fue la posibilidad de
 
 Para ello, el modelo `Anomaly` contiene un array llamado `authorizedReaders`, que almacena referencias a los usuarios autorizados.
 
-Los administradores y los investigadores propietarios pueden conceder o retirar estos permisos mediante un endpoint específico.
+Los administradores y los investigadores propietarios pueden conceder o retirar estos permisos mediante `PATCH /api/anomalies/:id/access`: `req.params.id` identifica la anomalía, `req.query.userId` indica el usuario destinatario y `req.body.action` determina si se concede (`grant`) o retira (`revoke`) el acceso. La concesión solo se permite a cuentas con rol `classC`.
 
 Cuando un usuario Clase C consulta las anomalías, la API filtra los resultados para mostrar únicamente los expedientes en los que aparece su identificador.
 
@@ -359,18 +380,18 @@ Cuando un controlador detecta una situación prevista, como un usuario sin permi
 
 Los errores capturados se envían mediante `next(error)` al middleware centralizado, que decide qué respuesta devolver.
 
-También se reconocen determinados errores de Mongoose y MongoDB:
+También se reconocen los errores de formato JSON enviados por el cliente y determinados errores de Mongoose y MongoDB:
 
 | Error | Código HTTP |
 |---|---|
-| Datos incorrectos o errores de validación | `400 Bad Request` |
+| Datos incorrectos, JSON mal formado o errores de validación | `400 Bad Request` |
 | Credenciales incorrectas | `401 Unauthorized` |
 | Acceso no permitido | `403 Forbidden` |
 | Recurso inexistente | `404 Not Found` |
 | Valor duplicado en un campo único | `409 Conflict` |
 | Error inesperado del servidor | `500 Internal Server Error` |
 
-Los errores inesperados se registran en la consola del servidor, mientras que el cliente recibe un mensaje genérico para evitar exponer detalles internos.
+El middleware registra los errores en la consola del servidor. En los casos inesperados, el cliente recibe un mensaje genérico para evitar exponer detalles internos.
 
 ### 5.3. Resultado
 
@@ -384,62 +405,74 @@ Durante la implementación se comprobó el funcionamiento del sistema provocando
 
 ### 6.1. Tests unitarios con Vitest
 
-Para comprobar el funcionamiento de determinadas partes de la aplicación se ha utilizado **Vitest**, una herramienta que permite ejecutar pruebas automatizadas de JavaScript.
+Para comprobar determinados comportamientos de la aplicación se ha utilizado **Vitest**, una herramienta que permite ejecutar pruebas automatizadas de JavaScript.
 
-Se han desarrollado seis tests unitarios, distribuidos en dos archivos:
+Se han desarrollado **12 tests**, distribuidos en tres archivos:
 
 **`permissions.test.js` — Cuatro tests**
 
-Comprueban el comportamiento de la función `canModifyAnomaly` en distintas situaciones:
+Comprueban el comportamiento de `canModifyAnomaly`:
 
-- Un investigador puede modificar una anomalía de la que es propietario.
-- Un administrador puede modificar una anomalía aunque no sea su propietario.
+- Un investigador puede modificar una anomalía propia.
+- Un administrador puede modificar una anomalía ajena.
 - Un investigador no puede modificar una anomalía ajena.
-- Un usuario Clase C no puede modificar una anomalía, aunque figure como propietario.
+- Un usuario Clase C no puede modificar anomalías, aunque figure como propietario.
 
 **`authorize.test.js` — Dos tests**
 
 Comprueban el middleware de autorización por roles:
 
-- Un administrador puede acceder a una ruta reservada a administradores.
-- Un investigador normal recibe una denegación de acceso y no puede continuar.
+- Un administrador puede continuar hacia una ruta reservada a administradores.
+- Un investigador recibe `403 Forbidden` y no continúa hacia el controlador protegido.
 
-Para probar el middleware se han utilizado funciones simuladas (*mocks*) de Vitest, que permiten comprobar las llamadas a `next()` y los códigos HTTP sin necesidad de iniciar el servidor.
+**`anomalyFilters.test.js` — Seis tests**
 
-Los seis tests pueden ejecutarse mediante el comando:
+Ejecutan el controlador `getAnomalies` con peticiones y respuestas simuladas. Comprueban que:
+
+- Se construye correctamente el filtro de clase de contención.
+- El valor de `minDanger` se convierte de texto a número y utiliza `$gte`.
+- La búsqueda por nombre utiliza `$regex` y la opción `i`.
+- Una clase de contención inválida genera un `HttpError` con estado `400`.
+- Un nivel de peligrosidad fuera de rango genera un error `400`.
+- Los filtros de un usuario Clase C conservan la condición `authorizedReaders` junto con los demás criterios.
+
+En las pruebas de filtros se utiliza `vi.spyOn(Anomaly, "find").mockResolvedValue([])` para **simular la consulta de Mongoose**, ejecutar el controlador sin una base de datos y comprobar qué objeto de filtro recibe `Anomaly.find()`. También se emplea `vi.restoreAllMocks()` después de cada test, para evitar que una simulación afecte a las siguientes.
+
+Los casos inválidos comprueban que el controlador envía el error a `next(error)` y no intenta consultar la base de datos.
+
+Las pruebas se ejecutan con:
 
 ```bash
 npm test
 ```
 
-Estas pruebas no necesitan conectarse a MongoDB, ya que comprueban directamente funciones y middlewares aislados.
+Los 12 tests se han ejecutado correctamente. Como son pruebas aisladas, no necesitan iniciar Express ni conectarse a MongoDB.
 
 ### 6.2. Pruebas manuales con Postman
 
-Además de los tests unitarios, se ha utilizado **Postman** para comprobar el funcionamiento de la API mediante peticiones HTTP reales.
+Además de los tests automatizados, se ha utilizado **Postman** para comprobar el funcionamiento de la API mediante peticiones HTTP reales.
 
-Se ha preparado una colección de peticiones organizada por autenticación, anomalías y administración.
+La colección está organizada en cuatro carpetas: **Preparación**, **Autenticación**, **Anomalías** y **Administración**. Incluye las peticiones de comprobación del servidor, registro, inicio de sesión, consulta del perfil, CRUD de anomalías, gestión de accesos y consulta o cambio de roles.
 
 Entre las operaciones comprobadas se encuentran:
 
-- Registro e inicio de sesión de usuarios.
-- Acceso a rutas protegidas mediante JWT.
-- Creación, consulta, modificación y eliminación de anomalías.
+- Registro, inicio de sesión y acceso a rutas protegidas mediante JWT.
+- Creación, consulta, actualización y eliminación de anomalías.
+- Consultas con filtros combinables por clase, peligrosidad y nombre.
 - Restricciones de acceso según el rol y la propiedad del expediente.
-- Concesión y retirada de permisos individuales a usuarios Clase C.
-- Respuestas de error ante operaciones no autorizadas o datos incorrectos.
+- Concesión y retirada de permisos individuales a usuarios Clase C; comprobación de que dejan de poder consultar los expedientes cuando se revoca el acceso.
+- Cambio de rol de usuarios y respuestas de error ante operaciones no autorizadas o parámetros incorrectos.
+- Rechazo de JSON mal formado con `400 Bad Request`.
 
-La colección utiliza variables para reutilizar la dirección del servidor, el identificador de una anomalía y el token de autenticación. Esto ha facilitado repetir las pruebas con diferentes usuarios.
+Las peticiones incluyen los Body y Params necesarios. Se utilizan **Path Variables** para seleccionar las anomalías o usuarios (`:id`) y **Query Params** para aplicar filtros, elegir el destinatario de un acceso (`userId`) o seleccionar un rol (`role`).
+
+La colección define `baseUrl` y `token`; el script posterior al login guarda automáticamente el JWT en `token`. El valor exportado de `baseUrl` está vacío, por lo que debe establecerse al importarla. Para simplificar el uso, varios identificadores de ejemplo se mantienen directamente en Params y deben sustituirse por los IDs reales de la base de datos utilizada. La colección no crea automáticamente los usuarios ni las anomalías, y el primer administrador debe configurarse una vez desde MongoDB.
 
 ### 6.3. Alcance y limitaciones
 
-Los seis tests unitarios desarrollados han superado las comprobaciones realizadas.
+Las **12 pruebas automatizadas** comprueban reglas de permisos y autorización, además de la construcción y validación de los filtros. No prueban todas las rutas, el controlador de login ni la interacción real con MongoDB.
 
-Sin embargo, su cobertura es limitada: verifican las reglas de autorización seleccionadas, pero no comprueban automáticamente todos los controladores ni la integración con MongoDB.
-
-Por este motivo, se han complementado con pruebas manuales en Postman.
-
-Como mejora futura, sería conveniente incorporar pruebas de integración que comprobaran automáticamente el registro, el inicio de sesión y las operaciones sobre anomalías, incluyendo su interacción con la base de datos.
+Por eso se han complementado con pruebas manuales mediante Postman. Como mejora futura, sería conveniente incorporar **pruebas de integración** que ejecutasen automáticamente el registro, la autenticación y las operaciones de persistencia sobre una base de datos de pruebas.
 
 ## 7. Problemas encontrados y soluciones
 
@@ -479,7 +512,7 @@ Posteriormente, se aprendió a utilizar funciones simuladas de Vitest para compr
 
 Durante este proceso también apareció un error de sintaxis al declarar un test: Vitest lo identificaba como pendiente (`todo`) porque la función de prueba no se había pasado correctamente como argumento de `it()`.
 
-Corregirlo ayudó a comprender mejor la estructura de las pruebas y a interpretar sus resultados.
+Corregirlo ayudó a comprender mejor la estructura de las pruebas y a interpretar sus resultados. Más adelante, al implementar los filtros de búsqueda, se aprendió a utilizar `vi.spyOn()` y `mockResolvedValue()` para comprobar qué consultas intenta construir un controlador sin ejecutar realmente MongoDB.
 
 ### 7.4. Error en el inicio de sesión durante una refactorización
 
@@ -497,7 +530,19 @@ Esto permitió comprender una limitación importante de las pruebas unitarias: s
 
 Por ello, las pruebas con Postman siguieron siendo necesarias para verificar el funcionamiento general de la API.
 
-### 7.5. Conclusiones del proceso de desarrollo
+### 7.5. Filtros combinables y mantenimiento de los permisos
+
+La incorporación de filtros en `getAnomalies` planteó un problema de diseño: el usuario Clase C solo puede ver determinados expedientes y una búsqueda no debía eliminar esa condición de seguridad.
+
+La solución fue construir un único objeto `filter`: primero se incorpora la condición `authorizedReaders` cuando corresponde y después se agregan las condiciones por clase, peligrosidad y nombre. Se añadieron validaciones para rechazar clases o niveles incorrectos y se escaparon los caracteres especiales de la búsqueda por nombre.
+
+Para verificarlo se desarrollaron seis tests que comprueban los filtros construidos y, en particular, que un usuario Clase C sigue limitado a sus expedientes autorizados. Las operaciones reales de concesión y retirada también se comprobaron mediante Postman.
+
+### 7.6. Tratamiento del JSON mal formado
+
+Durante la revisión final se detectó que un Body con JSON sintácticamente incorrecto provocaba una respuesta `500`, aunque el fallo era responsabilidad de la petición del cliente. Se añadió al middleware centralizado el tratamiento del tipo de error `entity.parse.failed`, de modo que devuelve `400 Bad Request` con un mensaje comprensible. La corrección se comprobó enviando una petición con JSON mal formado.
+
+### 7.7. Conclusiones del proceso de desarrollo
 
 Los problemas encontrados han demostrado la importancia de comprobar los cambios de forma progresiva, interpretar los mensajes de error y comprender el funcionamiento del código antes de modificarlo.
 
@@ -513,13 +558,13 @@ Aunque la API cumple los objetivos principales del proyecto, existen varias func
 
 **Ampliación de las pruebas automatizadas**
 
-Actualmente, los tests unitarios se centran en las reglas de autorización. Una mejora importante sería añadir pruebas de integración que comprobaran automáticamente el registro, el inicio de sesión y las operaciones sobre MongoDB.
+Los tests actuales comprueban permisos, autorización y filtros de búsqueda, pero no cubren automáticamente las operaciones completas de extremo a extremo. Una mejora importante sería añadir pruebas de integración que comprobaran el registro, el inicio de sesión y las operaciones sobre MongoDB.
 
 Esto permitiría detectar errores en partes de la aplicación que actualmente se comprueban de forma manual mediante Postman.
 
-**Filtros, búsquedas y paginación**
+**Ampliación de búsquedas y paginación**
 
-La consulta de anomalías podría ampliarse para permitir búsquedas por nombre, código, clase de contención o nivel de peligrosidad.
+Ya se han incorporado filtros combinables por nombre, clase de contención y peligrosidad mínima. En futuras versiones podría añadirse la búsqueda por código de anomalía u otros criterios.
 
 También sería conveniente incorporar paginación para evitar devolver demasiados expedientes en una sola respuesta si la base de datos creciera.
 
@@ -537,7 +582,7 @@ Actualmente, la aplicación se utiliza mediante peticiones HTTP. Una posible amp
 
 El desarrollo de Fundación Backend ha permitido aplicar de manera práctica los conocimientos adquiridos durante el Bootcamp y comprender mejor cómo se relacionan las diferentes partes de una API.
 
-A lo largo del proyecto se ha trabajado con Express, MongoDB, Mongoose, autenticación mediante JWT, control de permisos, gestión de errores y pruebas automatizadas.
+A lo largo del proyecto se ha trabajado con Express, MongoDB, Mongoose, autenticación mediante JWT, control de permisos, filtros de consulta, gestión de errores y pruebas automatizadas.
 
 Uno de los mayores aprendizajes ha sido la importancia de organizar el código de forma clara y separar las responsabilidades. También se ha comprobado que probar una funcionalidad, interpretar los errores y comprender las decisiones técnicas son partes fundamentales del desarrollo.
 

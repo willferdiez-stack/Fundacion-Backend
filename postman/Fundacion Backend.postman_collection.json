@@ -7,6 +7,33 @@
 	},
 	"item": [
 		{
+			"name": "Preparación",
+			"item": [
+				{
+					"name": "Comprobar servidor",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"health"
+							]
+						},
+						"description": "Público. Debería responder 200 con status \"ok\"."
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Autenticación",
 			"item": [
 				{
@@ -599,7 +626,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/admin/users/:id/role?rol=classC&rol=user",
+							"raw": "{{baseUrl}}/api/admin/users/:id/role?role=user",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -612,12 +639,13 @@
 							],
 							"query": [
 								{
-									"key": "rol",
+									"key": "role",
 									"value": "classC",
-									"description": "Cambiamos investigador a clase C"
+									"description": "Cambiamos investigador a clase C",
+									"disabled": true
 								},
 								{
-									"key": "rol",
+									"key": "role",
 									"value": "user",
 									"description": "Cambiamos Clase C a investigador"
 								}
@@ -626,7 +654,7 @@
 								{
 									"key": "id",
 									"value": "6b041c8ae46608585af8551e",
-									"description": "Investigador a clase C"
+									"description": "Usuario cuyo rol cambiamos"
 								}
 							]
 						}
@@ -673,14 +701,6 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": ""
-		},
-		{
-			"key": "anomalyId",
-			"value": ""
-		},
-		{
-			"key": "classCUserId",
 			"value": ""
 		},
 		{
