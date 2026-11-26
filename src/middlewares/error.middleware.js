@@ -24,6 +24,13 @@ export function errorHandler(err, req, res, next) {
         });
     }
 
+    // JSON mal formado en el cuerpo de la petición.
+    if (err.type === "entity.parse.failed") {
+        return res.status(400).json({
+            message: "El JSON de la petición no es válido"
+        });
+    }
+
     // Errores de validación de Mongoose.
     if (err.name === "ValidationError") {
         return res.status(400).json({
