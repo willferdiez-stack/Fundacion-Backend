@@ -1,0 +1,588 @@
+{
+	"info": {
+		"_postman_id": "919bd81d-592e-41cf-9215-28cb13a84049",
+		"name": "Fundacion Backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40973553"
+	},
+	"item": [
+		{
+			"name": "Autenticación",
+			"item": [
+				{
+					"name": "Registrar usuario",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"investigador02\",\n    \"email\": \"investigador02@fundacion.test\",\n    \"password\": \"Prueba123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login administrador",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    pm.collectionVariables.set(\"token\", pm.response.json().token);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@fundacion.test\",\n    \"password\": \"PruebaAdmin123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login investigador",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    pm.collectionVariables.set(\"token\", pm.response.json().token);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"investigador@fundacion.test\",\n    \"password\": \"Prueba123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login Clase C",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    pm.collectionVariables.set(\"token\", pm.response.json().token);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"clasec@fundacion.test\",\n    \"password\": \"PruebaClaseC123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mi perfil",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Anomalías",
+			"item": [
+				{
+					"name": "Crear anomalía",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"ANOM-104\",\n    \"name\": \"El espejo de los recuerdos\",\n    \"description\": \"Un espejo que refleja acontecimientos del pasado de quien lo observa.\",\n    \"containmentClass\": \"Euclid\",\n    \"dangerLevel\": 3,\n    \"protocols\": [\n        {\n            \"title\": \"Protocolo de observación\",\n            \"description\": \"Limitar la exposición al espejo a cinco minutos.\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/anomalies",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"anomalies"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar anomalías",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/anomalies",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"anomalies"
+							],
+							"query": [
+								{
+									"key": "containmentClass",
+									"value": "Safe",
+									"disabled": true
+								},
+								{
+									"key": "containmentClass",
+									"value": "Euclid",
+									"disabled": true
+								},
+								{
+									"key": "containmentClass",
+									"value": "Keter",
+									"disabled": true
+								},
+								{
+									"key": "containmentClass",
+									"value": "Patata",
+									"description": "Prueba para ver error",
+									"disabled": true
+								},
+								{
+									"key": "name",
+									"value": "reloj",
+									"description": "Nombre de la anomalía",
+									"disabled": true
+								},
+								{
+									"key": "name",
+									"value": "REL",
+									"description": "Prueba para ver el RegEx",
+									"disabled": true
+								},
+								{
+									"key": "name",
+									"value": "estación",
+									"description": "Nombre con tilde",
+									"disabled": true
+								},
+								{
+									"key": "name",
+									"value": "Patata",
+									"description": "Prueba para ver error",
+									"disabled": true
+								},
+								{
+									"key": "minDanger",
+									"value": "4",
+									"description": "Nivel de peligro mínimo",
+									"disabled": true
+								},
+								{
+									"key": "minDanger",
+									"value": "Patata",
+									"description": "Prueba para ver error",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Consultar anomalía",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/anomalies/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"anomalies",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "6b07f94fcbdcd9822086300e",
+									"description": "Sombra inversa"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Modificar anomalía",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dangerLevel\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/anomalies/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"anomalies",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "6b07f94fcbdcd9822086300e",
+									"description": "Sombra inversa"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar anomalía",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/anomalies/:id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"anomalies",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "6b07f94fcbdcd9822086300e",
+									"description": "Sombra inversa"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Conceder acceso",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"action\": \"grant\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/anomalies/:id/access?userId=6b045eabfc3400033e6da215",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"anomalies",
+								":id",
+								"access"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "6b045eabfc3400033e6da215",
+									"description": "sujetoC01"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "6b07f94fcbdcd9822086300e",
+									"description": "Sombra inversa"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Retirar acceso",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"action\": \"revoke\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/anomalies/:id/access?userId=6b045eabfc3400033e6da215",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"anomalies",
+								":id",
+								"access"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "6b045eabfc3400033e6da215",
+									"description": "sujetoC01"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "6b07f94fcbdcd9822086300e",
+									"description": "Sombra inversa"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Administración",
+			"item": [
+				{
+					"name": "Listar usuarios",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cambiar rol",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role\": \"classC\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users/{{classCUserId}}/role",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"users",
+								"{{classCUserId}}",
+								"role"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": ""
+		},
+		{
+			"key": "anomalyId",
+			"value": ""
+		},
+		{
+			"key": "classCUserId",
+			"value": ""
+		},
+		{
+			"key": "token",
+			"value": ""
+		}
+	]
+}
