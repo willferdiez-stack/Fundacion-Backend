@@ -67,6 +67,40 @@ export async function getAnomalies(req, res, next) {
             filter = { authorizedReaders: req.user.id };
         }
 
+        if (req.query.containmentClass !== undefined) {
+            const allowedClasses = ["Safe", "Euclid", "Keter"];
+
+            if (!allowedClasses.includes(req.query.containmentClass)) {
+                throw new HttpError(400, "Clase de contención no válida");
+            }
+
+            filter.containmentClass = req.query.containmentClass;
+        }
+
+        if (req.query.minDanger !== undefined) {
+            const minDanger = Number(req.query.minDanger);
+
+            if (!Number.isInteger(minDanger) || minDanger < 1 || minDanger > 5) {
+                throw new HttpError(400, "El nivel mínimo debe ser un entero entre 1 y 5");
+            }
+
+            filter.dangerLevel = { $gte: minDanger };
+        }
+
+        if (req.query.name !== undefined) {
+            if (typeof req.query.name !== "string" || !req.query.name.trim()) {
+                throw new HttpError(400, "Debes indicar un nombre válido");
+            }
+
+            const searchName = req.query.name.trim();
+            const escapedName = searchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+            filter.name = {
+                $regex: escapedName,
+                $options: "i"
+            };
+        }
+
         const anomalies = await Anomaly.find(filter);
 
         return res.status(200).json({
@@ -185,7 +219,8 @@ export async function updateAnomaly(req, res, next) {
  */
 export async function updateAnomalyAccess(req, res, next) {
     try {
-        const { userId, action } = req.body;
+        const userId = req.query.userId;
+        const { action } = req.body;
 
         // Comprobar que la operación solicitada es válida.
         if (!userId || !["grant", "revoke"].includes(action)) {
