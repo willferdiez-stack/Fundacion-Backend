@@ -37,7 +37,8 @@ export async function getUsers(req, res, next) {
  *
  * Solo permite los roles "admin", "user" y "classC".
  *
- * @param {Object} req - Petición con el ID del usuario y el nuevo rol.
+ * @param {Object} req - Petición con el ID en req.params.id
+ * y el nuevo rol en req.query.role.
  * @param {Object} res - Respuesta HTTP de Express.
  * @param {Function} next - Envía los errores al middleware centralizado.
  */

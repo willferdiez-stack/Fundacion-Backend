@@ -55,7 +55,8 @@ export async function createAnomaly(req, res, next) {
  * los expedientes. Los usuarios Clase C solo reciben aquellas
  * anomalías en cuyo array authorizedReaders aparecen incluidos.
  *
- * @param {Object} req - Petición HTTP con el usuario autenticado.
+ * @param {Object} req - Petición con req.user y los filtros opcionales
+ * req.query.containmentClass, req.query.minDanger y req.query.name.
  * @param {Object} res - Respuesta HTTP de Express.
  * @param {Function} next - Envía los errores al middleware centralizado.
  */
@@ -213,7 +214,10 @@ export async function updateAnomaly(req, res, next) {
  * Se utiliza addToSet para evitar referencias duplicadas
  * y pull para retirar una autorización existente.
  *
- * @param {Object} req - Petición HTTP con el ID de la anomalía.
+ * El ID de anomalía llega en req.params.id, el ID del usuario
+ * destinatario en req.query.userId y la acción en req.body.action.
+ *
+ * @param {Object} req - Petición HTTP con esos identificadores y la acción.
  * @param {Object} res - Respuesta HTTP de Express.
  * @param {Function} next - Envía los errores al middleware centralizado.
  */
