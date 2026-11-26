@@ -43,7 +43,7 @@ export async function getUsers(req, res, next) {
  */
 export async function updateUserRole(req, res, next) {
     try {
-        const { role } = req.body;
+        const { role } = req.query;
 
         if (!["admin", "user", "classC"].includes(role)) {
             throw new HttpError(400, "Rol no válido");

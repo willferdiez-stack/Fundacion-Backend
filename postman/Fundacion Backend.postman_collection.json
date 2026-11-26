@@ -10,13 +10,16 @@
 			"name": "Autenticación",
 			"item": [
 				{
-					"name": "Registrar usuario",
+					"name": "Registrar administrador",
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"investigador02\",\n    \"email\": \"investigador02@fundacion.test\",\n    \"password\": \"Prueba123!\"\n}",
+							"raw": "{\n    \"username\": \"admin01\",\n    \"email\": \"admin@fundacion.test\",\n    \"password\": \"PruebaAdmin123!\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -33,7 +36,88 @@
 								"auth",
 								"register"
 							]
+						},
+						"description": "Crea una cuenta de ejemplo con rol user (201). Después hay que elevar este usuario a admin manualmente en MongoDB para desbloquear la API administrativa."
+					},
+					"response": []
+				},
+				{
+					"name": "Registrar investigador",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"investigador01\",\n    \"email\": \"investigador@fundacion.test\",\n    \"password\": \"Prueba123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Crea una cuenta de ejemplo con rol user (201). Este usuario conserva el rol user y podrá crear sus propias anomalías."
+					},
+					"response": []
+				},
+				{
+					"name": "Registrar Clase C",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const data = pm.response.json();",
+									"    if (data[\"user\"][\"id\"]) {",
+									"        pm.collectionVariables.set(\"classCUserId\", data[\"user\"][\"id\"]);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
 						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"sujetoC01\",\n    \"email\": \"clasec@fundacion.test\",\n    \"password\": \"PruebaClaseC123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Crea una cuenta de ejemplo con rol user (201). Después el administrador tendrá que cambiar su rol a classC desde Administración / Cambiar rol."
 					},
 					"response": []
 				},
@@ -507,7 +591,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"role\": \"classC\"\n}",
+							"raw": "",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -515,7 +599,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/api/admin/users/{{classCUserId}}/role",
+							"raw": "{{baseUrl}}/api/admin/users/:id/role?rol=classC&rol=user",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -523,8 +607,27 @@
 								"api",
 								"admin",
 								"users",
-								"{{classCUserId}}",
+								":id",
 								"role"
+							],
+							"query": [
+								{
+									"key": "rol",
+									"value": "classC",
+									"description": "Cambiamos investigador a clase C"
+								},
+								{
+									"key": "rol",
+									"value": "user",
+									"description": "Cambiamos Clase C a investigador"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "6b041c8ae46608585af8551e",
+									"description": "Investigador a clase C"
+								}
 							]
 						}
 					},
